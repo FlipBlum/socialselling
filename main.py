@@ -15,11 +15,29 @@ import requests
 import json
 from langchain.schema import SystemMessage
 import streamlit as st
+import scrapydo
+import scrapy
+from scrapy.http import HtmlResponse
+
 
 # 0. API Keys
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
 serper_api_key = os.getenv("SERP_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# 0.1 Setup Spyder
+
+scrapydo.setup()
+
+# Define the spider
+class SimpleSpider(scrapy.Spider):
+    name = 'simple_spider'
+
+    def start_requests(self):
+        yield scrapy.Request(url=self.url, callback=self.parse)
+
+    def parse(self, response):
+        return response
 
 # 1. Tool für die Suche
 def search(query):
@@ -39,42 +57,23 @@ def search(query):
     return response.text
 
 # 2. Tool fürs scraping
-def scrape_website(objective: str, url: str):
-    # Webseite scrapen und den Inhalt zusammenfassen, basierend auf dem Zweck, wenn der Inhalt zu groß ist.
-    # Der Zweck ist die ursprüngliche Aufgabe, die der Benutzer dem Agenten gegeben hat, und die URL ist die URL der zu scrapenden Website.
+def scrape_website(url):
+    # Define a callback function to handle the response
+    def parse(response):
+        print("Received response:", response)  # Debugging: Print the response
+        return response.text
 
-    print("Scraping website...")
-    # Definiere die Header für die Anfrage
-    headers = {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-    }
-
-    # Definiere die Daten, die in der Anfrage gesendet werden sollen
-    data = {
-        "url": url
-    }
-
-    # Konvertiere das Python-Objekt in einen JSON-String
-    data_json = json.dumps(data)
-
-    # Sende den POST request
-    post_url = f"https://chrome.browserless.io/content?token={browserless_api_key}"
-    response = requests.post(post_url, headers=headers, data=data_json)
-
-    # Überprüfe den HTTP-Antwortstatuscode
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, "html.parser")
+    # Run the spider
+    response_text = scrapydo.run_spider(SimpleSpider, start_urls=[url], callback=parse)
+    
+    if response_text:
+        soup = BeautifulSoup(response_text, "html.parser")
         text = soup.get_text()
-
-        if len(text) > 10000:
-            output = summary(objective, text)
-            return output
-        else:
-            return text
+        return text
     else:
-        print(f"HTTP request failed with status code {response.status_code}")
-
+        st.error("Failed to scrape the website")
+        return None
+    
 # 3. Tool fürs Zusammenfassen
 def summary(objective, content):
     llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-16k-0613")
@@ -147,9 +146,9 @@ if st.button("Start"):
     company_linkedin_search = search("site:linkedin.com/company " + company_linkedin_url)
 
     # Schritt 2: Webseiten-Scraping
-    company_content = scrape_website("Unternehmenszusammenfassung", company_url)
-    company_linkedin_content = scrape_website("LinkedIn Unternehmenszusammenfassung", company_linkedin_url)
-    person_content = scrape_website("Personenzusammenfassung", linkedin_url)
+    company_content = scrape_website(company_url)
+    company_linkedin_content = scrape_website(company_linkedin_url)
+    person_content = scrape_website(linkedin_url)
 
     if company_content is not None and company_linkedin_content is not None and person_content is not None:
         # Schritt 3: Textgenerierung mit OpenAI's ChatGPT
