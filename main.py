@@ -15,29 +15,15 @@ import requests
 import json
 from langchain.schema import SystemMessage
 import streamlit as st
-import scrapydo
-import scrapy
-from scrapy.http import HtmlResponse
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # 0. API Keys
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
 serper_api_key = os.getenv("SERP_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
-
-# 0.1 Setup Spyder
-
-scrapydo.setup()
-
-# Define the spider
-class SimpleSpider(scrapy.Spider):
-    name = 'simple_spider'
-
-    def start_requests(self):
-        yield scrapy.Request(url=self.url, callback=self.parse)
-
-    def parse(self, response):
-        return response
+proxycurl_api_key = os.getenv("PROXYCURL_API_KEY")
 
 # 1. Tool für die Suche
 def search(query):
@@ -56,23 +42,30 @@ def search(query):
 
     return response.text
 
-# 2. Tool fürs scraping
-def scrape_website(url):
-    # Define a callback function to handle the response
-    def parse(response):
-        print("Received response:", response)  # Debugging: Print the response
-        return response.text
 
-    # Run the spider
-    response_text = scrapydo.run_spider(SimpleSpider, start_urls=[url], callback=parse)
+def get_profile(profile_id):
+    api_endpoint = 'https://nubela.co/proxycurl/api/v2/linkedin'
+    header_dic = {'Authorization': 'Bearer ' + proxycurl_api_key}
+    params = {
+        'url': f'https://www.linkedin.com/in/{profile_id}',
+    }
+    response = requests.get(api_endpoint,
+                            params=params,
+                            headers=header_dic)
     
-    if response_text:
-        soup = BeautifulSoup(response_text, "html.parser")
-        text = soup.get_text()
-        return text
-    else:
-        st.error("Failed to scrape the website")
-        return None
+    return response.json()
+
+def get_company(company_id):
+    api_endpoint = 'https://nubela.co/proxycurl/api/v2/linkedin'
+    header_dic = {'Authorization': 'Bearer ' + proxycurl_api_key}
+    params = {
+        'url': f'https://www.linkedin.com/company/{company_id}',
+    }
+    response = requests.get(api_endpoint,
+                            params=params,
+                            headers=header_dic)
+    
+    return response.json()
     
 # 3. Tool fürs Zusammenfassen
 def summary(objective, content):
@@ -112,7 +105,8 @@ def generate_linkedIn_email(prompt):
 
     **Instructions:**
     - Hier sind Informationen zu dem Unternehmen von dem aus die E-Mail losgeschickt wird:
-    Wir sind die Schlander & Blum GmbH. Wir verkaufen Qualitäts, Rework und Montage Outsourcingkapazitäten an Unternehmen aller Branchen. Bei Schlander & Blum können sie sich auf höchste Qualität verlassen, sei es mit Automatisierungstechnik, Sondermaschinenbau oder Menschen, wir liefern das was sie brauchen und mehr.
+    Wir sind die Schlander & Blum GmbH. Wir verkaufen Qualitäts, Rework und Montage Outsourcingkapazitäten an Unternehmen aller Branchen. 
+    Bei Schlander & Blum können sie sich auf höchste Qualität verlassen, sei es mit Automatisierungstechnik, Sondermaschinenbau oder Menschen, wir liefern das was sie brauchen und mehr.
 
     **Company Summary:**
     {company_summary}
@@ -145,22 +139,23 @@ if st.button("Start"):
     company_search = search("site:linkedin.com " + company_url)
     company_linkedin_search = search("site:linkedin.com/company " + company_linkedin_url)
 
-    # Schritt 2: Webseiten-Scraping
-    company_content = scrape_website(company_url)
-    company_linkedin_content = scrape_website(company_linkedin_url)
-    person_content = scrape_website(linkedin_url)
 
-    if company_content is not None and company_linkedin_content is not None and person_content is not None:
-        # Schritt 3: Textgenerierung mit OpenAI's ChatGPT
-        company_summary = summary("Zusammenfassung des Unternehmens", company_content + company_linkedin_content)
-        person_summary = summary("Zusammenfassung der Person", person_content)
-
+    def perform_scraping(): 
+    # Use Proxycurl API to get profile data
+        company_content = get_profile(company_url)
+        company_linkedin_content = get_company(company_linkedin_url)
+        person_content = get_profile(linkedin_url)
+    
+        return company_content, company_linkedin_content, person_content
+        
+    if company_content and company_linkedin_content and person_content:
+    
         # Schritt 4: Anzeige der Zusammenfassungen
         st.subheader("Zusammenfassung zur Person:")
-        st.write(person_summary)
+        st.write(person_content)
 
         st.subheader("Zusammenfassung zum Unternehmen:")
-        st.write(company_summary)
+        st.write(company_content)
 
         # Anzeige der zusätzlichen Informationen
         st.subheader("Weitere Informationen:")
@@ -168,7 +163,7 @@ if st.button("Start"):
 
         st.subheader("Generierte E-Mail:")
         # Generiere die E-Mail mit dem erstellten Prompt
-        generated_prompt = f"Company Summary: {company_summary}\nPerson Summary: {person_summary}\nAdditional Information: {weitere_informationen}\n\nGeneriere eine E-Mail für Social Selling auf LinkedIn:"
+        generated_prompt = f"Company Summary: {company_content}\nPerson Summary: {person_content}\nAdditional Information: {weitere_informationen}\n\nGeneriere eine E-Mail für Social Selling auf LinkedIn:"
         generated_email = generate_linkedIn_email(generated_prompt)
         st.write(generated_email)
     else:
