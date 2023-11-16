@@ -77,9 +77,15 @@ def generate_linkedIn_email(prompt):
     # Encapsulate the prompt in a SystemMessage object, and put it in a list of lists as required
     message_objects = [[SystemMessage(content=prompt)]]
 
+    # Log the prompt
+    print("Generating email with prompt:", prompt)
+
+    # Encapsulate the prompt in a SystemMessage object, and put it in a list of lists as required
+    message_objects = [[SystemMessage(content=prompt)]]
+
     try:
         # The generate method now receives the correct format of messages
-        result = llm.generate(message_objects, max_tokens=1000)
+        result = llm.generate(message_objects, max_tokens=600)
         # Extract the content from the resulting ChatGeneration objects
         return [generation.message.content for generation in result.generations[0]]
     except AttributeError as e:

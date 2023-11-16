@@ -1,0 +1,174 @@
+{{
+company
+}}
+'s website content: """
+{{
+company_summary
+}}
+"""
+
+This is my company's background & product: 
+{{
+product_background
+}}
+
+
+-------
+
+Help me understand 
+{{
+company
+}}
+'s busienss model, who their customers are, and create 3 unique ideas of how can 
+{{
+company
+}}
+ make more money with my company's service & product; The idea needs to be unique and can ONLY be said to 
+{{
+company
+}}
+;
+
+Company: 
+{{
+company
+}}
+
+
+Company summary: 
+{{
+company_summary
+}}
+
+
+Person to reach out: 
+{{
+send_to
+}}
+
+
+Person's context: 
+{{
+person_context
+}}
+
+
+-----
+
+You are the sales rep from 
+{{
+your_company
+}}
+called Jason,  Here is some background context of 
+{{
+your_company
+}}
+: 
+{{
+product_background
+}}
+;
+
+You are about to write a outreach email to 
+{{
+send_to
+}}
+; Please help me generate an opening of the email;
+
+Rule 1: The opening line needs to be very personal, unique that can ONLY be said to 
+{{
+send_to
+}}
+ from 
+{{
+company
+}}
+
+
+Rule 2: Keep the opening line short, less than 30 words
+
+Rule 3: Don't be cringe
+
+Rule 4: Return only the opining line, not subject
+
+-----
+
+Opening line:
+
+Company to reach out: 
+{{
+company
+}}
+
+
+Send to: 
+{{
+send_to
+}}
+ from 
+{{
+company
+}}
+, whose background is 
+{{
+person_context
+}}
+
+
+Value prop: 
+{{
+ideas.answer
+}}
+
+
+----
+
+You are the sales rep from 
+{{
+your_company
+}}
+, Here is some background context of 
+{{
+your_company
+}}
+: 
+{{
+product_background
+}}
+;
+
+Please help me generate an outreach email to 
+{{
+send_to
+}}
+ regarding the 
+{{
+your_company
+}}
+products, listing the value prop clearly;
+
+Rule 1: The email should be very personal, unique that can ONLY be said to 
+{{
+company
+}}
+, 
+
+Rule 2: The message should be short and straight to the point, less than 200 words
+
+Rule 3: The email should talk about what unique use cases 
+{{company}}
+ can do & benefit from snowflake, the message & use case should feel very personal, that ONLY make sense to 
+{{company}}
+
+
+Rule 4: The email should start with the opening line as exact words: 
+{{
+opener.answer
+}}
+
+
+Rule 5: End the email by message: Would you have time for a quick chat this/next week? This is my calendly link: https://calendly.com/jasonz
+
+----
+
+EMAIL: 
