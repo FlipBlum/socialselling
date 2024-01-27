@@ -7,4 +7,6 @@ requests==2.26.0
 streamlit==1.15.0
 scrapydo==0.1.0
 scrapy==2.11.0
+pydantic==2.5.3
+langchain
 ```

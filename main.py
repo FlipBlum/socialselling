@@ -1,30 +1,16 @@
-from bs4 import BeautifulSoup
 import requests
-import json
-from langchain.schema import SystemMessage
-import streamlit as st
-from dotenv import load_dotenv
-from langchain import PromptTemplate
-from langchain.agents import initialize_agent, Tool
-from langchain.agents import AgentType
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import MessagesPlaceholder
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains.summarize import load_summarize_chain
-from langchain.tools import BaseTool
-from pydantic import BaseModel, Field
 import os
-from langchain.schema import SystemMessage
-
-load_dotenv()
+import json
+from bs4 import BeautifulSoup
+import streamlit as st
+from openai import OpenAI
 
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
 serper_api_key = os.getenv("SERP_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 proxycurl_api_key = os.getenv("PROXYCURL_API_KEY")
 
-# Scraping function for Website URL
+# 1. Scraping function for Website URL
 def scrape_website_content(url):
     try:
         response = requests.get(url)
@@ -36,8 +22,28 @@ def scrape_website_content(url):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return None
-    
-# 3. Tool fürs Zusammenfassen
+
+#2. summarize function openai
+def summarize_text(text, objective, model="gpt-4-0125-preview"):
+    headers = {
+        "Authorization": f"Bearer {openai_api_key}",
+        "Content-Type": "application/json"
+    }
+
+    prompt = f"Write a summary of the following text for {objective}:\n{text}"
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "temperature": 0.7,
+        "max_tokens": 150
+    }
+
+    response = requests.post("https://api.openai.com/v1/engines/{model}/completions",
+                             headers=headers, json=data)
+    return response.json().get('choices', [])[0].get('text', '').strip()
+
+
+'''# 3. summarize function langchain
 def summary(objective, content):
     llm = ChatOpenAI(temperature=0, model="gpt-4-1106-preview")
 
@@ -63,13 +69,35 @@ def summary(objective, content):
     output = summary_chain.run(input_documents=docs, objective=objective)
 
     return output
+'''
 
-# Combine summaries into one text
+# 3. Combine summaries into one text
 def combine_summaries(website_summary, company_summary):
     combined_summary = f"{website_summary}\n\n{company_summary}"
     return combined_summary
 
-# 5. E-Mail generierung
+
+# 4. message generation openai
+def generate_message(prompt, model="gpt-4-0125-preview"):
+
+
+    headers = {
+        "Authorization": f"Bearer {openai_api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "temperature": 0.7,
+        "max_tokens": 400
+    }
+
+    response = requests.post("https://api.openai.com/v1/engines/{model}/completions",
+                             headers=headers, json=data)
+    return response.json().get('choices', [])[0].get('text', '').strip()
+
+'''# 5. E-Mail generierung langchain
 def generate_linkedIn_email(prompt):
     llm = ChatOpenAI(temperature=0, model="gpt-4-1106-preview")
     
@@ -95,8 +123,9 @@ def generate_linkedIn_email(prompt):
         print(f"An error occurred with message: {e}")
         # Potentially log the full traceback here
         raise
+'''
 
-# Function to get the linkedin_profile
+# 5. Function to get the linkedin_profile
 def get_profile(profile_id):
     api_endpoint = 'https://nubela.co/proxycurl/api/v2/linkedin'
     header_dic = {'Authorization': 'Bearer ' + proxycurl_api_key}
@@ -139,7 +168,7 @@ def get_company(company_id):
         print(f"Failed to fetch data: {response.status_code}")
         return None
 
-# Hilfsfunktionen zur Extraktion von Profilinformationen
+# 6. helperfunctions for extraction 
 def extract_experience(experiences):
     experience_summary = ""
     for exp in experiences:
@@ -162,7 +191,7 @@ def extract_certifications(certifications):
         cert_summary += f"{cert['name']} von {cert.get('authority', 'Unbekannte Autorität')}. "
     return cert_summary
 
-# Streamlit Interface
+# 7. Streamlit Interface
 st.title("LinkedIn Scraper & LLM Text Generation")
 
 company_services = st.text_input("Unsere Services")
@@ -178,7 +207,7 @@ if st.button("Start"):
     # Scraping website content
     website_content = scrape_website_content(company_url)
     if website_content:
-        website_summary = summary("summarize for business insights", website_content)
+        website_summary = summarize_text("summarize for business insights", website_content)
     else:
         st.error("Failed to scrape the website content.")
     
@@ -200,11 +229,11 @@ if st.button("Start"):
     if 'full_name' in person_content:
         profile_summary += f"Name: {person_content['full_name']}. "
 
-    person_summary = summary("summarize for business insights", profile_summary)
+    person_summary = summarize_text("summarize for business insights", profile_summary)
         
     # Get the company summary
     if 'description' in company_linkedin_content:
-        company_linkedin_summary = summary("summarize for business insights", company_linkedin_content['description'])
+        company_linkedin_summary = summarize_text("summarize for business insights", company_linkedin_content['description'])
     else:
         # Handle the absence of 'description', perhaps by logging an error or using a placeholder
         company_linkedin_summary = "Description not available."
@@ -250,7 +279,7 @@ Generieren Sie die E-Mail:
     )
 
     # Generate the email with the combined summary
-    generated_email = generate_linkedIn_email(email_prompt)
+    generated_email = generate_message(email_prompt)
 
     # Display the generated email
     st.subheader("Generierte E-Mail:")
